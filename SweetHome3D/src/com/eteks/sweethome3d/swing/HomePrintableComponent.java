@@ -380,8 +380,8 @@ public class HomePrintableComponent extends JComponent implements Printable {
     if (pageExists == NO_SUCH_PAGE 
         && planView != null 
         && (homePrint == null || homePrint.isPlanPrinted())) {
-      // Try to print next plan view page for all viewable levels
-      pageExists = printPlanPages(g2D, pageFormat, planView, page - this.furniturePageCount);
+      // Try to print next plan view page
+      pageExists = ((Printable)planView).print(g2D, pageFormat, page - this.furniturePageCount);
       if (pageExists == PAGE_EXISTS
           && !this.printablePages.contains(page)) {
         this.printablePages.add(page);
@@ -424,47 +424,6 @@ public class HomePrintableComponent extends JComponent implements Printable {
     }  
     pageFormat.setPaper(oldPaper);    
     return pageExists;
-  }
-
-  /**
-   * Prints all plan pages
-   */
-  private int printPlanPages(Graphics2D g2D, PageFormat pageFormat, PlanView planView, int planPageIndex) throws PrinterException {
-    List<Level> printedLevels = new ArrayList<Level>();
-    for (Level level : this.home.getLevels()) {
-      if (level.isViewable()) {
-        printedLevels.add(level);
-      }
-    }
-    if (printedLevels.isEmpty()) {
-      // Home without levels: keep the previous behavior
-      return ((Printable)planView).print(g2D, pageFormat, planPageIndex);
-    }
-    Level selectedLevel = this.home.getSelectedLevel();
-    Graphics dummyGraphics = new BufferedImage(1, 1, BufferedImage.TYPE_INT_RGB).getGraphics();
-    try {
-      int firstPageOfLevel = 0;
-      for (Level level : printedLevels) {
-        this.home.setSelectedLevel(level);
-        // Count the pages of this level on a dummy image, so nothing is drawn twice
-        int levelPageCount = 0;
-        while (((Printable)planView).print(dummyGraphics, pageFormat, levelPageCount) == PAGE_EXISTS) {
-          levelPageCount++;
-        }
-        if (planPageIndex < firstPageOfLevel + levelPageCount) {
-          // The requested page belongs to this level: really print it
-          return ((Printable)planView).print(g2D, pageFormat, planPageIndex - firstPageOfLevel);
-        }
-        firstPageOfLevel += levelPageCount;
-      }
-      return NO_SUCH_PAGE;
-    } finally {
-      dummyGraphics.dispose();
-      // Runs even if a page can't be rendered
-      if (this.home.getSelectedLevel() != selectedLevel) {
-        this.home.setSelectedLevel(selectedLevel);
-      }
-    }
   }
 
   /**
